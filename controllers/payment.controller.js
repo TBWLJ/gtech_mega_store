@@ -1,53 +1,60 @@
 import Order from "../models/Order.js";
-import paystack from "paystack-api";
 import crypto from "crypto";
-
-const paystackClient = new paystack(process.env.PAYSTACK_SECRET_KEY);
+import axios from "axios";
 
 // Initialize payment for an existing order
+
 export const initializePayment = async (req, res) => {
   try {
     const { orderId } = req.body;
 
-    if (!orderId) return res.status(400).json({ message: "Order ID is required" });
+    if (!orderId) {
+      return res.status(400).json({ message: "Order ID is required" });
+    }
 
     const order = await Order.findById(orderId);
     if (!order) return res.status(404).json({ message: "Order not found" });
 
-    if (order.paymentStatus === "paid")
+    if (order.paymentStatus === "paid") {
       return res.status(400).json({ message: "Order already paid" });
-
-    // If there's already a pending paymentReference, return it (idempotency)
-    if (order.paymentStatus === "pending" && order.paymentReference) {
-      return res.json({
-        message: "Payment already initialized",
-        paystackAuthorizationUrl: `https://checkout.paystack.com/${order.paymentReference}`,
-        order,
-      });
     }
-    const paystackResponse = await paystackClient.transaction.initialize({
-      email: req.user.email,
-      amount: order.totalAmount * 100, // kobo
-      currency: "NGN",
-      reference: `order_${order._id}_${Date.now()}`,
-      metadata: {
-        orderId: order._id.toString(),
-      },
-    });
 
-    order.paymentReference = paystackResponse.data.reference;
+    const reference = `order_${order._id}_${Date.now()}`;
+
+    const response = await axios.post(
+      "https://api.paystack.co/transaction/initialize",
+      {
+        email: req.user.email,
+        amount: order.totalAmount * 100,
+        currency: "NGN",
+        reference,
+        metadata: {
+          orderId: order._id.toString(),
+        },
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    order.paymentReference = reference;
+    order.paymentStatus = "pending";
     await order.save();
 
     res.json({
       message: "Payment initialized",
-      paystackAuthorizationUrl: paystackResponse.data.authorization_url,
+      paystackAuthorizationUrl: response.data.data.authorization_url,
       order,
     });
   } catch (error) {
-    console.error("Initialize Payment Error:", error.message);
-    res.status(500).json({ message: error.message });
+    console.error("Initialize Payment Error:", error.response?.data || error.message);
+    res.status(500).json({ message: "Payment initialization failed" });
   }
 };
+
 
 // Verify payment
 export const verifyPayment = async (req, res) => {
