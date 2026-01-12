@@ -22,19 +22,79 @@ const router = express.Router();
  * @swagger
  * /products:
  *   get:
- *     summary: Get all products
+ *     summary: Retrieve a list of products
+ *     description: |
+ *       Fetch all products from the store. Supports optional filtering, sorting, and search.
+ *       - **search**: Search by product name or description (case-insensitive)
+ *       - **categories**: Comma-separated list of categories to filter by
+ *       - **minPrice**: Minimum price
+ *       - **maxPrice**: Maximum price
+ *       - **sort**: Sorting option. Possible values: `price-asc`, `price-desc`, `newest`, `name-asc`, `name-desc`, `popular`
  *     tags: [Products]
+ *     parameters:
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search term for product name or description
+ *       - in: query
+ *         name: categories
+ *         schema:
+ *           type: string
+ *         description: Comma-separated list of category IDs or names
+ *       - in: query
+ *         name: minPrice
+ *         schema:
+ *           type: number
+ *         description: Minimum product price
+ *       - in: query
+ *         name: maxPrice
+ *         schema:
+ *           type: number
+ *         description: Maximum product price
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *           enum: [price-asc, price-desc, newest, name-asc, name-desc, popular]
+ *         description: Sort order for products
  *     responses:
  *       200:
- *         description: List of products
+ *         description: Successfully retrieved products
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Product'
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 count:
+ *                   type: number
+ *                   example: 20
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Product'
+ *       500:
+ *         description: Server error while fetching products
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: Server error while fetching products
+ *                 error:
+ *                   type: string
+ *                   example: Error message details
  */
 router.get("/", getProducts);
+
 
 /**
  * @swagger

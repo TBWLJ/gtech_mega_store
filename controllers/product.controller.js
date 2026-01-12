@@ -77,12 +77,101 @@ export const createProduct = async (req, res) => {
  * Get all products
  */
 export const getProducts = async (req, res) => {
-    try {
-        const products = await Product.find();
-        res.json(products);
-    } catch (error) {
-        res.status(500).json({ message: error.message });
+  try {
+    const { 
+      search, 
+      categories, 
+      minPrice, 
+      maxPrice, 
+      sort 
+    } = req.query;
+
+    // Build the query object
+    let query = {};
+
+    // 1. Search by name / title (case-insensitive)
+    if (search) {
+      query.name = { $regex: search.trim(), $options: 'i' };
+      // Alternative: search in multiple fields
+      query.$or = [
+        { name: { $regex: search.trim(), $options: 'i' } },
+        { description: { $regex: search.trim(), $options: 'i' } }
+      ];
     }
+
+    // 2. Categories filter (expects comma-separated string)
+    if (categories) {
+      const categoryArray = categories.split(',').map(cat => cat.trim());
+      query.category = { $in: categoryArray }; // assuming field is called "category"
+      // If your field is called "categories" and is an array:
+      // query.categories = { $in: categoryArray };
+    }
+
+    // 3. Price range
+    if (minPrice !== undefined || maxPrice !== undefined) {
+      query.price = {};
+
+      if (minPrice !== undefined && !isNaN(minPrice)) {
+        query.price.$gte = Number(minPrice);
+      }
+
+      if (maxPrice !== undefined && !isNaN(maxPrice)) {
+        query.price.$lte = Number(maxPrice);
+      }
+    }
+
+    // 4. Create the base query
+    let productsQuery = Product.find(query);
+
+    // 5. Sorting
+    if (sort) {
+      const sortOptions = {};
+
+      switch (sort) {
+        case 'price-asc':
+          sortOptions.price = 1;
+          break;
+        case 'price-desc':
+          sortOptions.price = -1;
+          break;
+        case 'newest':
+          sortOptions.createdAt = -1;
+          break;
+        case 'name-asc':
+          sortOptions.name = 1;
+          break;
+        case 'name-desc':
+          sortOptions.name = -1;
+          break;
+        case 'popular':
+          // if you have a views/popularity field
+          sortOptions.views = -1;
+          break;
+        default:
+          // default sort (newest first is common)
+          sortOptions.createdAt = -1;
+      }
+
+      productsQuery = productsQuery.sort(sortOptions);
+    }
+
+    // Execute query
+    const products = await productsQuery;
+
+    res.json({
+      success: true,
+      count: products.length,
+      data: products
+    });
+
+  } catch (error) {
+    console.error('Get products error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Server error while fetching products',
+      error: error.message 
+    });
+  }
 };
 
 /**
