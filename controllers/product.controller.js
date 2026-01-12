@@ -220,18 +220,11 @@ export const deleteProduct = async (req, res) => {
       return res.status(404).json({ message: "Product not found" });
     }
 
-    // 🔥 Delete images/videos from Cloudinary
-    if (product.images && product.images.length > 0) {
-      const deletePromises = product.images.map((url) => {
-        // Extract public_id from Cloudinary URL
-        const publicId = url
-          .split("/")
-          .slice(-2)
-          .join("/")
-          .split(".")[0];
-
-        return cloudinary.v2.uploader.destroy(publicId);
-      });
+    // 🔥 Delete Cloudinary images (array of objects)
+    if (product.images && Array.isArray(product.images)) {
+      const deletePromises = product.images
+        .filter(img => img && img.public_id)
+        .map(img => cloudinary.v2.uploader.destroy(img.public_id));
 
       await Promise.all(deletePromises);
     }
@@ -244,4 +237,5 @@ export const deleteProduct = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
 
