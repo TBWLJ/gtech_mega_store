@@ -3,12 +3,17 @@ import cors from 'cors';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
 import connectDB from './utils/db.js';
+import swaggerUi from "swagger-ui-express";
 
 import userRoute from './routes/user.route.js';
 import productRoute from './routes/product.route.js';
 import reviewRoute from './routes/review.route.js';
 import orderRoute from './routes/order.route.js';
 import paymentRoute from './routes/payment.route.js';
+import authRoute from './routes/auth.route.js';
+import { swaggerSpec } from "./config/swagger.js";
+
+
 
 // Load environment variables
 dotenv.config();
@@ -32,6 +37,8 @@ app.get('/', (req, res) => {
   res.send('Hello, World!');
 });
 
+app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.use('/api/auth', authRoute);
 app.use('/api/users', userRoute);
 app.use('/api/products', productRoute);
 app.use('/api/reviews', reviewRoute);

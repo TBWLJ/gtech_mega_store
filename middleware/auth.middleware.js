@@ -2,29 +2,29 @@ import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 
 export const protect = async (req, res, next) => {
-    let token;
+  let token;
 
-    if (
-        req.headers.authorization &&
-        req.headers.authorization.startsWith("Bearer")
-    ) {
-        try {
-            token = req.headers.authorization.split(" ")[1];
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith("Bearer")
+  ) {
+    try {
+      token = req.headers.authorization.split(" ")[1];
 
-            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-            req.user = await User.findById(decoded.id).select("_id role");
+      // decode userId (not id)
+      req.user = await User.findById(decoded.userId).select("_id role");
 
-            next();
-        } catch (error) {
-            return res.status(401).json({ message: "Not authorized" });
-        }
+      return next();
+    } catch (error) {
+      return res.status(401).json({ message: "Not authorized" });
     }
+  }
 
-    if (!token) {
-        return res.status(401).json({ message: "No token provided" });
-    }
+  return res.status(401).json({ message: "No token provided" });
 };
+
 
 export const admin = (req, res, next) => {
     if (req.user && req.user.role === "admin") {
