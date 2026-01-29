@@ -6,15 +6,36 @@ export const createOrder = async (req, res) => {
   try {
     const { products, shippingAddress } = req.body;
 
-    if (!products || products.length === 0)
+    if (!products || products.length === 0) {
       return res.status(400).json({ message: "No products in order" });
+    }
 
-    // Fetch product details from DB and validate
     const detailedProducts = await Promise.all(
-      products.map(async (item) => {
-        if (item.quantity <= 0) throw new Error("Quantity must be at least 1");
-        const dbProduct = await Product.findById(item.product);
-        if (!dbProduct) throw new Error(`Product not found: ${item.product}`);
+      products.map(async (item, index) => {
+        const productId = item.product || item._id || item.id;
+
+        if (!productId) {
+          throw {
+            status: 400,
+            message: `Product ID missing at index ${index}`,
+          };
+        }
+
+        if (!item.quantity || item.quantity <= 0) {
+          throw {
+            status: 400,
+            message: `Invalid quantity at index ${index}`,
+          };
+        }
+
+        const dbProduct = await Product.findById(productId);
+        if (!dbProduct) {
+          throw {
+            status: 404,
+            message: `Product not found: ${productId}`,
+          };
+        }
+
         return {
           product: dbProduct._id,
           quantity: item.quantity,
@@ -23,13 +44,11 @@ export const createOrder = async (req, res) => {
       })
     );
 
-    // Calculate total amount
     const totalAmount = detailedProducts.reduce(
       (sum, item) => sum + item.price * item.quantity,
       0
     );
 
-    // Save order with pending payment
     const order = await Order.create({
       user: req.user._id,
       products: detailedProducts,
@@ -38,12 +57,16 @@ export const createOrder = async (req, res) => {
       paymentStatus: "pending",
     });
 
-    res.status(201).json({ message: "Order created", order });
+    return res.status(201).json({ message: "Order created", order });
   } catch (error) {
-    console.error("Create Order Error:", error.message);
-    res.status(500).json({ message: error.message });
+    console.error("Create Order Error:", error);
+
+    return res.status(error.status || 500).json({
+      message: error.message || "Internal server error",
+    });
   }
 };
+
 
 // Get all orders (admin)
 export const getOrders = async (req, res) => {
