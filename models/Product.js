@@ -43,6 +43,7 @@ const productSchema = new mongoose.Schema({
             },
         },
     ],
+    features: [String],
     inStock: {
         type: Boolean,
         default: true,
