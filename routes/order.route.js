@@ -3,6 +3,7 @@ import {
   createOrder,
   getOrders,
   getUserOrders,
+  updateOrderStatus,
 } from "../controllers/order.controller.js";
 import { protect, admin } from "../middleware/auth.middleware.js";
 
@@ -92,5 +93,39 @@ router.get("/my-orders", protect, getUserOrders);
  *         description: Admin access required
  */
 router.get("/", protect, admin, getOrders);
+
+/**
+ * @swagger
+ * /orders/{id}:
+ *   put:
+ *     summary: Update order status (Admin only)
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 enum: [pending, paid, shipped, delivered, cancelled]
+ *     responses:
+ *       200:
+ *         description: Order updated successfully
+ *       400:
+ *         description: Invalid status
+ *       403:
+ *         description: Admin access required
+ */
+router.put("/:id", protect, admin, updateOrderStatus);
 
 export default router;

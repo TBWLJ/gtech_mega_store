@@ -227,3 +227,34 @@ export const getUserOrders = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// Update order status (admin)
+export const updateOrderStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, deliveryStatus, paymentStatus } = req.body;
+
+    const nextStatus = status || deliveryStatus || paymentStatus;
+    if (!nextStatus) {
+      return res.status(400).json({ message: "Status is required" });
+    }
+
+    const allowedStatuses = ["pending", "paid", "shipped", "delivered", "cancelled"];
+    if (!allowedStatuses.includes(nextStatus)) {
+      return res.status(400).json({ message: "Invalid status value" });
+    }
+
+    const order = await Order.findById(id);
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    order.status = nextStatus;
+    await order.save();
+
+    return res.status(200).json({ message: "Order updated", order });
+  } catch (error) {
+    console.error("Update Order Status Error:", error.message);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
