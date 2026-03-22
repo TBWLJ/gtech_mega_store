@@ -2,37 +2,70 @@ import mongoose from "mongoose";
 
 const orderSchema = new mongoose.Schema(
   {
-    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-    products: [
+    orderId: {
+      type: String,
+      required: true,
+      unique: true,
+      index: true,
+    },
+
+    email: {
+      type: String,
+      required: true,
+      index: true,
+    },
+
+    shipping: {
+      name: { type: String, required: true },
+      email: { type: String, required: true },
+      phone: { type: String, required: true },
+      address: { type: String, required: true },
+      city: { type: String, required: true },
+      state: { type: String, required: true },
+      country: { type: String, required: true },
+    },
+
+    items: [
       {
-        product: { type: mongoose.Schema.Types.ObjectId, ref: "Product", required: true },
-        quantity: { type: Number, default: 1, min: 1 },
+        id: { type: String, required: true },
+        name: { type: String, required: true },
         price: { type: Number, required: true },
+        quantity: { type: Number, required: true },
+        imageUrl: { type: String },
       },
     ],
-    totalAmount: { type: Number, required: true },
-    paymentStatus: {
+
+    total: { type: Number, required: true },
+
+    status: {
       type: String,
-      enum: ["pending", "paid", "failed", "cancelled"],
+      enum: ["pending", "paid", "shipped", "delivered", "cancelled"],
       default: "pending",
+      index: true,
     },
-    paymentReference: { type: String },
-    transactionId: { type: String },
+    transactionId: {
+      type: String,
+      index: true,
+    },
     paidAt: { type: Date },
-    deliveryStatus: {
+
+    paymentReference: {
       type: String,
-      enum: ["pending", "shipped", "delivered", "cancelled"],
-      default: "pending",
+      index: true,
     },
-    shippingAddress: {
-      address: String,
-      city: String,
-      state: String,
-      postalCode: String,
-      country: String,
-    },
+
+    createdAt: { type: Date, default: Date.now },
   },
   { timestamps: true }
 );
+
+// Frequently used queries: order history sorted by date
+orderSchema.index({ email: 1, createdAt: -1 });
+
+// Admin views: filter by status + date
+orderSchema.index({ status: 1, createdAt: -1 });
+
+// Search for specific payment references fast
+orderSchema.index({ paymentReference: 1 });
 
 export default mongoose.models.Order || mongoose.model("Order", orderSchema);
